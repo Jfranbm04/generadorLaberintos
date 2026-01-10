@@ -4,92 +4,83 @@ using UnityEngine;
 
 public class MapGenerator : MonoBehaviour
 {
-
     public class Cell
     {
         public bool visited = false;
-        // 0: Arriba, 1: Abajo, 2: Izquierda, 3: Derecha
+        // 0: Up, 1: Down, 2: Left, 3: Right
         public bool[] status = new bool[4];
     }
 
-    [SerializeField] public Vector2Int size;
-    [SerializeField] public int initPosition = 0;
-    [SerializeField] GameObject room;
-    [SerializeField] public Vector2 roomSize;
-    [SerializeField] public int nRooms;
-    List<Cell> board;
+    [Header("Configuración")]
+    public Vector2Int size;
+    [SerializeField] private int initPosition = 0;
+    [SerializeField] private int nRooms;
+    [SerializeField] private GameObject roomPrefab;
+    [SerializeField] private Vector2 roomOffset = new Vector2(10, 10);
 
-    private void Start()
-    {
-        MazeGenerator();
-    }
+    private List<Cell> board;
+
+    // Setters públicos para que el Controller pueda usarlos
+    public void SetNRooms(int value) => nRooms = value;
+    public void SetInitPosition(int value) => initPosition = value;
 
     public void MazeGenerator()
     {
         board = new List<Cell>();
 
-        for (int i = 0; i < size.x; i++)
+        // Llenar el tablero (Importante: j es Y, i es X)
+        for (int j = 0; j < size.y; j++)
         {
-            for (int j = 0; j < size.y; j++)
+            for (int i = 0; i < size.x; i++)
             {
                 board.Add(new Cell());
             }
         }
 
-        int currentCell = initPosition;
+        // Validar que la posición inicial no esté fuera de rango
+        int currentCell = Mathf.Clamp(initPosition, 0, board.Count - 1);
         Stack<int> path = new Stack<int>();
-        int num = 0;
+        int roomsCreated = 0;
 
-        // Marcamos la primera como visitada antes del loop
-        board[currentCell].visited = true;
-
-        while (num < nRooms)
+        while (roomsCreated < nRooms)
         {
+            board[currentCell].visited = true;
             List<int> neighbours = CheckNeighbours(currentCell);
 
             if (neighbours.Count == 0)
             {
-                if (path.Count == 0)
-                    break;
-                else
-                    currentCell = path.Pop();
+                if (path.Count == 0) break;
+                currentCell = path.Pop();
             }
             else
             {
                 path.Push(currentCell);
                 int newCell = neighbours[Random.Range(0, neighbours.Count)];
 
-                // Lógica de apertura de paredes (status)
-                if (newCell > currentCell)
+                // Lógica de apertura de puertas
+                if (newCell == currentCell + size.x) // Arriba
                 {
-                    if (newCell - 1 == currentCell)
-                    {
-                        board[currentCell].status[3] = true; // Derecha
-                        board[newCell].status[2] = true;    // Izquierda
-                    }
-                    else
-                    {
-                        board[currentCell].status[0] = true; // Arriba
-                        board[newCell].status[1] = true;    // Abajo
-                    }
+                    board[currentCell].status[0] = true;
+                    board[newCell].status[1] = true;
                 }
-                else
+                else if (newCell == currentCell - size.x) // Abajo
                 {
-                    if (newCell + 1 == currentCell)
-                    {
-                        board[currentCell].status[2] = true;
-                        board[newCell].status[3] = true;
-                    }
-                    else
-                    {
-                        board[currentCell].status[1] = true;
-                        board[newCell].status[0] = true;
-                    }
+                    board[currentCell].status[1] = true;
+                    board[newCell].status[0] = true;
+                }
+                else if (newCell == currentCell - 1) // Izquierda
+                {
+                    board[currentCell].status[2] = true;
+                    board[newCell].status[3] = true;
+                }
+                else if (newCell == currentCell + 1) // Derecha
+                {
+                    board[currentCell].status[3] = true;
+                    board[newCell].status[2] = true;
                 }
 
                 currentCell = newCell;
-                board[currentCell].visited = true; // Marcamos la nueva celda
-                num++;
+                roomsCreated++;
             }
         }
         DungeonGenerator();
@@ -101,42 +92,37 @@ public class MapGenerator : MonoBehaviour
         {
             for (int j = 0; j < size.y; j++)
             {
-                int index = i + j * size.x;
-
-                // Solo instanciamos si la celda fue visitada
-                if (board[index].visited)
+                Cell currentData = board[i + j * size.x];
+                if (currentData.visited) // Solo instanciar si fue parte del camino
                 {
-                    var newRoom = Instantiate(room, new Vector3(i * roomSize.x, 0, j * roomSize.y), Quaternion.identity, transform).GetComponent<Room>();
-                    newRoom.UpdateRoom(board[index].status);
+                    Vector3 pos = new Vector3(i * roomOffset.x, 0, j * roomOffset.y);
+                    GameObject go = Instantiate(roomPrefab, pos, Quaternion.identity, transform);
+                    go.GetComponent<Room>().UpdateRoom(currentData.status);
                 }
             }
         }
     }
 
-    private List<int> CheckNeighbours(int cellIndex)
+    private List<int> CheckNeighbours(int cell)
     {
         List<int> neighbours = new List<int>();
 
-        // Abajo (suponiendo que j-1 es index - size.x)
-        if (cellIndex - size.x >= 0 && !board[cellIndex - size.x].visited)
-        {
-            neighbours.Add(cellIndex - size.x);
-        }
-        // Arriba
-        if (cellIndex + size.x < board.Count && !board[cellIndex + size.x].visited)
-        {
-            neighbours.Add(cellIndex + size.x);
-        }
-        // Izquierda
-        if (cellIndex % size.x != 0 && !board[cellIndex - 1].visited)
-        {
-            neighbours.Add(cellIndex - 1);
-        }
-        // Derecha
-        if ((cellIndex + 1) % size.x != 0 && !board[cellIndex + 1].visited)
-        {
-            neighbours.Add(cellIndex + 1);
-        }
+        // ARRIBA (North)
+        if (cell + size.x < board.Count && !board[cell + size.x].visited)
+            neighbours.Add(cell + size.x);
+
+        // ABAJO (South)
+        if (cell - size.x >= 0 && !board[cell - size.x].visited)
+            neighbours.Add(cell - size.x);
+
+        // IZQUIERDA (West)
+        if (cell % size.x != 0 && !board[cell - 1].visited)
+            neighbours.Add(cell - 1);
+
+        // DERECHA (East)
+        if ((cell + 1) % size.x != 0 && !board[cell + 1].visited)
+            neighbours.Add(cell + 1);
+
         return neighbours;
     }
 }

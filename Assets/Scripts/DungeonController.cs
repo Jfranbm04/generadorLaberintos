@@ -1,32 +1,35 @@
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
-public class DungeonController : MonoBehaviour {
+public class DungeonController : MonoBehaviour
+{
     public int sizeXField = 10;
     public int sizeYField = 10;
     public TMP_InputField initPositionField;
     public TMP_InputField nRoomsField;
 
     public MapGenerator mapGenerator;
-    public GameObject panelPrincipal; 
+    public GameObject panelPrincipal;
 
     public void GenerateDungeon()
     {
-        if (
-            int.TryParse(initPositionField.text, out int initPosition) && int.TryParse(nRoomsField.text, out int nRooms)) {
+        // Validamos que los campos tengan números
+        if (int.TryParse(initPositionField.text, out int initPos) &&
+            int.TryParse(nRoomsField.text, out int rooms))
+        {
+            if (panelPrincipal != null) panelPrincipal.SetActive(false);
 
-            if (panelPrincipal != null) {
-                panelPrincipal.SetActive(false); 
-            }
+            // Configuramos los parámetros antes de generar
             mapGenerator.size = new Vector2Int(sizeXField, sizeYField);
-            mapGenerator.roomSize = new Vector2(10, 10);
-            mapGenerator.initPosition = initPosition;
-            mapGenerator.nRooms = nRooms;
+            mapGenerator.SetInitPosition(initPos);
+            mapGenerator.SetNRooms(rooms);
+
+            // Llamamos al generador
             mapGenerator.MazeGenerator();
         }
-        else {
-            Debug.LogError("Por favor, introduce valores válidos.");
+        else
+        {
+            Debug.LogError("Valores inválidos en los campos de texto.");
         }
     }
 }

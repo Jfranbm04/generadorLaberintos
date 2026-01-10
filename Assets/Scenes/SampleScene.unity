@@ -1957,9 +1957,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MapGenerator
   size: {x: 8, y: 4}
   initPosition: 0
-  room: {fileID: 5438888854693004295, guid: fc824e4fa156b9a4092a8417fe484dd4, type: 3}
-  roomSize: {x: 10, y: 10}
   nRooms: 2
+  roomPrefab: {fileID: 5438888854693004295, guid: fc824e4fa156b9a4092a8417fe484dd4, type: 3}
+  roomOffset: {x: 10, y: 10}
 --- !u!4 &1692188578
 Transform:
   m_ObjectHideFlags: 0
